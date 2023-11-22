@@ -17,11 +17,13 @@ public class FirstPersonMovement : MonoBehaviour
     private InputAction fire;
 
     private CharacterController controller;
+    private FirstPersonPickup firstPersonPickup;
 
     private void Awake()
     {
         input = new FirstPersonInput();
         controller = GetComponent<CharacterController>();
+        firstPersonPickup = GetComponent<FirstPersonPickup>();
     }
 
     private void OnEnable()
@@ -76,6 +78,6 @@ public class FirstPersonMovement : MonoBehaviour
 
     private void Fire()
     {
-
+        firstPersonPickup.PickupRayHit();
     }
 }
