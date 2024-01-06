@@ -4,10 +4,23 @@ using UnityEngine;
 
 public class Pickups : MonoBehaviour
 {
-    [SerializeField] private Collider myCollider;
+    [SerializeField] private PickupInteraction playerScript;
+    [SerializeField] private LayerMask pickupMask;
+    [SerializeField] private LayerMask heldMask;
 
-    public Collider GetCollider()
+
+    public void OnPickUp()
     {
-        return myCollider;
+        Debug.Log("Picked Up");
+        playerScript.SetCurrentObject(gameObject);
+    }
+
+    public void OnDrop()
+    {
+        Debug.Log("Dropped");
+        playerScript.SetCurrentObject(null);
+        gameObject.layer = 6;
+        GetComponent<Rigidbody>().useGravity = true;
+        GetComponent<Rigidbody>().constraints = RigidbodyConstraints.None;
     }
 }

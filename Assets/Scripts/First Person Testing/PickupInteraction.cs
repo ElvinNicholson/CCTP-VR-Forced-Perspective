@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // TAKEN FROM https://itch.io/blog/547361/unity-superliminal-tutorial
-public class FirstPersonPickup : MonoBehaviour
+public class PickupInteraction : MonoBehaviour
 {
+    [SerializeField] private Camera mainCamera;
     [SerializeField] private float pickupRange;
-    private LayerMask pickupMask;
-    private LayerMask heldMask;
-    private LayerMask terrainMask;
+    [SerializeField] private LayerMask pickupMask;
+    [SerializeField] private LayerMask heldMask;
+    [SerializeField] private LayerMask terrainMask;
     [SerializeField] private float nudgeDistance;
 
     private GameObject currentObject;
@@ -23,13 +24,6 @@ public class FirstPersonPickup : MonoBehaviour
 
     [SerializeField] private int NUMBER_OF_GRID_ROWS = 10;
     [SerializeField] private int NUMBER_OF_GRID_COLUMNS = 10;
-
-    private void Awake()
-    {
-        pickupMask = LayerMask.GetMask("Pickup");
-        heldMask = LayerMask.GetMask("Holding");
-        terrainMask = LayerMask.GetMask("Terrain");
-}
 
     private void FixedUpdate()
     {
@@ -52,7 +46,7 @@ public class FirstPersonPickup : MonoBehaviour
             RaycastHit hit = CastTowardsGridPoint(shapedGrid[i], terrainMask + pickupMask);
             if (hit.collider == null) continue;
 
-            Vector3 wallPoint = Camera.main.transform.InverseTransformPoint(hit.point);
+            Vector3 wallPoint = mainCamera.transform.InverseTransformPoint(hit.point);
             if (i == 0 || wallPoint.z < closestZ)
             {
                 //Find the closest point of the obstacle(s) to the camera
@@ -69,13 +63,13 @@ public class FirstPersonPickup : MonoBehaviour
 
     private void UpdateScale()
     {
-        float newScale = (Camera.main.transform.position - currentObject.transform.position).magnitude / initialDistanceScaleRatio;
+        float newScale = (mainCamera.transform.position - currentObject.transform.position).magnitude / initialDistanceScaleRatio;
         //if (Mathf.Abs(newScale - currentObject.transform.localScale.x) < SCALE_MARGIN) return;
 
         currentObject.transform.localScale = new Vector3(newScale, newScale, newScale);
         //By scaling we're actually changing the viewportPosition of heldObject and we don't want that
-        Vector3 newPos = Camera.main.ViewportToWorldPoint(new Vector3(initialViewportPos.x, initialViewportPos.y,
-            (currentObject.transform.position - Camera.main.transform.position).magnitude));
+        Vector3 newPos = mainCamera.ViewportToWorldPoint(new Vector3(initialViewportPos.x, initialViewportPos.y,
+            (currentObject.transform.position - mainCamera.transform.position).magnitude));
         currentObject.transform.position = newPos;
     }
 
@@ -84,11 +78,36 @@ public class FirstPersonPickup : MonoBehaviour
         if (currentObject == null) return;
 
         //Hits
-        Gizmos.matrix = Camera.main.transform.localToWorldMatrix;
+        Gizmos.matrix = mainCamera.transform.localToWorldMatrix;
         Gizmos.color = Color.green;
         foreach (Vector3 point in shapedGrid)
         {
             Gizmos.DrawSphere(point, .01f);
+        }
+    }
+
+    public void SetCurrentObject(GameObject pickupObject)
+    {
+        if (pickupObject == null)
+        {
+            currentObject = null;
+        }
+        else
+        {
+            currentObject = pickupObject;
+
+            initialScale = pickupObject.transform.localScale;
+            currentObject = pickupObject.transform.gameObject;
+
+            currentObject.layer = 7;
+            currentObject.GetComponent<Rigidbody>().useGravity = false;
+            currentObject.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeAll;
+            //currentObject.transform.parent = mainCamera.transform;
+            initialDistanceScaleRatio = (mainCamera.transform.position - currentObject.transform.position).magnitude / initialScale.x;
+            initialViewportPos = mainCamera.WorldToViewportPoint(currentObject.transform.position);
+
+            Vector3[] boundingBoxPoints = GetBoundingBoxPoints();
+            SetupShapedGrid(boundingBoxPoints);
         }
     }
 
@@ -97,7 +116,7 @@ public class FirstPersonPickup : MonoBehaviour
         if (currentObject)
         {
             // Drop
-            currentObject.layer = 6;
+            currentObject.layer = pickupMask;
             currentObject.GetComponent<Rigidbody>().useGravity = true;
             currentObject.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.None;
             currentObject.transform.parent = null;
@@ -105,19 +124,19 @@ public class FirstPersonPickup : MonoBehaviour
             return;
         }
 
-        Ray ray = new Ray(Camera.main.transform.position, Camera.main.transform.forward);
+        Ray ray = new Ray(mainCamera.transform.position, mainCamera.transform.forward);
         if (Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupMask))
         {
             // Pickup
             initialScale = hit.transform.localScale;
             currentObject = hit.transform.gameObject;
 
-            currentObject.layer = 7;
+            currentObject.layer = heldMask;
             currentObject.GetComponent<Rigidbody>().useGravity = false;
             currentObject.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeAll;
-            currentObject.transform.parent = Camera.main.transform;
-            initialDistanceScaleRatio = (Camera.main.transform.position - currentObject.transform.position).magnitude / initialScale.x;
-            initialViewportPos = Camera.main.WorldToViewportPoint(currentObject.transform.position);
+            currentObject.transform.parent = mainCamera.transform;
+            initialDistanceScaleRatio = (mainCamera.transform.position - currentObject.transform.position).magnitude / initialScale.x;
+            initialViewportPos = mainCamera.WorldToViewportPoint(currentObject.transform.position);
 
             Vector3[] boundingBoxPoints = GetBoundingBoxPoints();
             SetupShapedGrid(boundingBoxPoints);
@@ -160,14 +179,14 @@ public class FirstPersonPickup : MonoBehaviour
         Vector3 cameraPoint;
         Vector2 viewportPoint;
         Vector3 closestPoint = currentObject.GetComponent<Renderer>().localBounds.ClosestPoint(Camera.main.transform.position);
-        float closestZ = Camera.main.transform.InverseTransformPoint(currentObject.transform.TransformPoint(closestPoint)).z;
+        float closestZ = mainCamera.transform.InverseTransformPoint(currentObject.transform.TransformPoint(closestPoint)).z;
         if (closestZ <= 0) throw new System.Exception("HeldObject's inside the player!");
 
         for (int i = 0; i < bbPoints.Length; i++)
         {
             bbPoint = currentObject.transform.TransformPoint(bbPoints[i]);
-            viewportPoint = Camera.main.WorldToViewportPoint(bbPoint);
-            cameraPoint = Camera.main.transform.InverseTransformPoint(bbPoint);
+            viewportPoint = mainCamera.WorldToViewportPoint(bbPoint);
+            cameraPoint = mainCamera.transform.InverseTransformPoint(bbPoint);
             cameraPoint.z = closestZ;
 
             if (viewportPoint.x < 0 || viewportPoint.x > 1
@@ -218,10 +237,10 @@ public class FirstPersonPickup : MonoBehaviour
 
     private RaycastHit CastTowardsGridPoint(Vector3 gridPoint, LayerMask layers)
     {
-        Vector3 worldPoint = Camera.main.transform.TransformPoint(gridPoint);
-        Vector3 origin = Camera.main.WorldToViewportPoint(worldPoint);
+        Vector3 worldPoint = mainCamera.transform.TransformPoint(gridPoint);
+        Vector3 origin = mainCamera.WorldToViewportPoint(worldPoint);
         origin.z = 0;
-        origin = Camera.main.ViewportToWorldPoint(origin);
+        origin = mainCamera.ViewportToWorldPoint(origin);
         Vector3 direction = worldPoint - origin;
         RaycastHit hit;
         Physics.Raycast(origin, direction, out hit, 1000, layers);
