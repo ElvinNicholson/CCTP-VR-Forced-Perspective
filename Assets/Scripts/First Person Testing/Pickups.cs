@@ -4,7 +4,8 @@ using UnityEngine;
 
 public class Pickups : MonoBehaviour
 {
-    [SerializeField] private PickupInteraction playerScript;
+    //[SerializeField] private PickupInteraction playerScript;
+    [SerializeField] private SimplePickupInteraction playerScript;
     [SerializeField] private LayerMask pickupMask;
     [SerializeField] private LayerMask heldMask;
 
