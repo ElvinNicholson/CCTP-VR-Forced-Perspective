@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.XR.Interaction.Toolkit;
 
 public class Pickups : MonoBehaviour
 {
@@ -8,18 +9,28 @@ public class Pickups : MonoBehaviour
     [SerializeField] private SimplePickupInteraction playerScript;
     [SerializeField] private LayerMask pickupMask;
     [SerializeField] private LayerMask heldMask;
+    private XRSimpleInteractable xrScript;
 
-
-    public void OnPickUp()
+    private void Start()
     {
-        Debug.Log("Picked Up");
-        playerScript.SetCurrentObject(gameObject);
+        xrScript = GetComponent<XRSimpleInteractable>();
+        xrScript.selectEntered.AddListener(OnSelectEnter);
+        xrScript.selectExited.AddListener(OnSelectExit);
     }
 
-    public void OnDrop()
+    private void OnSelectEnter(SelectEnterEventArgs args)
+    {
+        Debug.Log("Picked Up");
+        playerScript.SetCurrentObject(gameObject, args.interactorObject.transform);
+        args.interactorObject.transform.gameObject.GetComponent<XRInteractorLineVisual>().enabled = false;
+    }
+
+    private void OnSelectExit(SelectExitEventArgs args)
     {
         Debug.Log("Dropped");
-        playerScript.SetCurrentObject(null);
+        playerScript.SetCurrentObject(null, null);
+        args.interactorObject.transform.gameObject.GetComponent<XRInteractorLineVisual>().enabled = true;
+
         gameObject.layer = 6;
         GetComponent<Rigidbody>().useGravity = true;
         GetComponent<Rigidbody>().constraints = RigidbodyConstraints.None;

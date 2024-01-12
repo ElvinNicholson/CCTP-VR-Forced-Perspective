@@ -5,7 +5,7 @@ using UnityEngine;
 public class SimplePickupInteraction : MonoBehaviour
 {
     [SerializeField] private LayerMask excludePickupLayerMask;
-    [SerializeField] private Transform parent;
+    private Transform controller;
     private GameObject currentObject;
     private float initialDistance;
     private Vector3 initialScale;
@@ -14,7 +14,7 @@ public class SimplePickupInteraction : MonoBehaviour
     {
         if (currentObject)
         {
-            Ray ray = new Ray(transform.position, parent.position - transform.position);
+            Ray ray = new Ray(transform.position, controller.position - transform.position);
             if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, excludePickupLayerMask))
             {
                 Bounds bounds = currentObject.GetComponent<Renderer>().bounds;
@@ -25,17 +25,19 @@ public class SimplePickupInteraction : MonoBehaviour
         }
     }
 
-    public void SetCurrentObject(GameObject pickupObject)
+    public void SetCurrentObject(GameObject pickupObject, Transform controllerTransform)
     {
         if (pickupObject == null)
         {
             currentObject.GetComponent<Rigidbody>().isKinematic = false;
             currentObject.GetComponent<Collider>().enabled = true;
             currentObject = null;
+            controller = null;
         }
         else
         {
             currentObject = pickupObject;
+            controller = controllerTransform;
             initialDistance = (transform.position - currentObject.transform.position).magnitude;
             initialScale = pickupObject.transform.localScale;
             currentObject.GetComponent<Rigidbody>().isKinematic = true;
