@@ -7,8 +7,6 @@ public class Pickups : MonoBehaviour
 {
     //[SerializeField] private PickupInteraction playerScript;
     [SerializeField] private SimplePickupInteraction playerScript;
-    [SerializeField] private LayerMask pickupMask;
-    [SerializeField] private LayerMask heldMask;
     private XRSimpleInteractable xrScript;
 
     private void Start()
@@ -23,6 +21,7 @@ public class Pickups : MonoBehaviour
         Debug.Log("Picked Up");
         playerScript.SetCurrentObject(gameObject, args.interactorObject.transform);
         args.interactorObject.transform.gameObject.GetComponent<XRInteractorLineVisual>().enabled = false;
+        gameObject.layer = 7;
     }
 
     private void OnSelectExit(SelectExitEventArgs args)
