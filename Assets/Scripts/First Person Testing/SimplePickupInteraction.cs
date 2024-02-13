@@ -17,20 +17,20 @@ public class SimplePickupInteraction : MonoBehaviour
     private float initialDistance;
     private Vector3 initialScale;
 
-    private List<Vector3> boundingBoxPoints;
-    private List<Vector3> validBoundingBoxPoints;
+    private List<Vector3> shapedGridPoints;
     [SerializeField] private int gridSize;
 
     private void OnDrawGizmos()
     {
-        if (validBoundingBoxPoints == null)
+        if (shapedGridPoints == null)
         {
             return;
         }
 
-        Gizmos.color = Color.red;
+        Gizmos.color = Color.blue;
+        Gizmos.DrawSphere(lerpedPosition, 0.1f);
 
-        foreach (Vector3 point in validBoundingBoxPoints)
+        foreach (Vector3 point in shapedGridPoints)
         {
             Gizmos.DrawSphere(point, 0.1f);
         }
@@ -40,8 +40,8 @@ public class SimplePickupInteraction : MonoBehaviour
     {
         if (currentObject)
         {
-            boundingBoxPoints = GetBoundingBoxPoints();
-            validBoundingBoxPoints = RaycastPoint();
+            shapedGridPoints = GetShapedGridPoints(GetBoundingGridPoints());
+            float closestDistance = RaycastGridPoints();
 
             Ray anchorRay = new Ray(anchor.position, anchor.forward);
             Physics.Raycast(anchorRay, out RaycastHit anchorRayHit, Mathf.Infinity, excludePickupLayerMask);
@@ -57,7 +57,15 @@ public class SimplePickupInteraction : MonoBehaviour
             }
 
             lerpedPosition = Vector3.Lerp(lerpedPosition, lastRayHit, lerpSpeed * Time.deltaTime);
+            Vector3 direction = (lerpedPosition - transform.position).normalized;
+            Bounds bounds = currentObject.GetComponent<Renderer>().bounds;
+            float longestBoundDist = Vector3.Distance(bounds.min, bounds.max);
 
+            currentObject.transform.position = transform.position + (direction * closestDistance) - (direction * bounds.size.x);
+            float scale = Vector3.Distance(transform.position, currentObject.transform.position) / initialDistance;
+            currentObject.transform.localScale = initialScale * scale;
+
+            /*
             Ray ray = new Ray(transform.position, lerpedPosition - transform.position);
             if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, excludePickupLayerMask))
             {
@@ -66,6 +74,7 @@ public class SimplePickupInteraction : MonoBehaviour
                 float scale = Vector3.Distance(transform.position, currentObject.transform.position) / initialDistance;
                 currentObject.transform.localScale = initialScale * scale;
             }
+            */
         }
     }
 
@@ -75,9 +84,11 @@ public class SimplePickupInteraction : MonoBehaviour
         {
             // Object Dropped
             currentObject.GetComponent<Rigidbody>().isKinematic = false;
-            currentObject.GetComponent<Collider>().enabled = true;
+            currentObject.GetComponent<Collider>().isTrigger = false;
             currentObject = null;
             anchor = null;
+            shapedGridPoints.Clear();
+            lastRayHit = Vector3.zero;
         }
         else
         {
@@ -88,11 +99,11 @@ public class SimplePickupInteraction : MonoBehaviour
             initialDistance = (transform.position - currentObject.transform.position).magnitude;
             initialScale = pickupObject.transform.localScale;
             currentObject.GetComponent<Rigidbody>().isKinematic = true;
-            currentObject.GetComponent<Collider>().enabled = false;
+            currentObject.GetComponent<Collider>().isTrigger = true;
         }
     }
 
-    private List<Vector3> GetBoundingBoxPoints()
+    private List<Vector3> GetBoundingGridPoints()
     {
         List<Vector3> points = new List<Vector3>();
 
@@ -117,7 +128,7 @@ public class SimplePickupInteraction : MonoBehaviour
         return points;
     }
 
-    private List<Vector3> RaycastPoint()
+    private List<Vector3> GetShapedGridPoints(List<Vector3> boundingBoxPoints)
     {
         List<Vector3> validPoints = new List<Vector3>();
 
@@ -131,5 +142,24 @@ public class SimplePickupInteraction : MonoBehaviour
         }
 
         return validPoints;
+    }
+
+    private float RaycastGridPoints()
+    {
+        float closestDistance = Mathf.Infinity;
+        foreach (Vector3 point in shapedGridPoints)
+        {
+            Vector3 direction = point - transform.position;
+            RaycastHit hit;
+            if (Physics.Raycast(transform.position, direction, out hit, Mathf.Infinity, excludePickupLayerMask))
+            {
+                if (closestDistance > hit.distance)
+                {
+                    closestDistance = hit.distance;
+                }
+            }
+        }
+
+        return closestDistance;
     }
 }
