@@ -19,21 +19,31 @@ public class SimplePickupInteraction : MonoBehaviour
 
     private List<Vector3> shapedGridPoints;
     [SerializeField] private int gridSize;
+    private Vector3 rayHitPoint;
+    private Vector3 closestPoint;
+    private Vector3 transformPoint;
 
     private void OnDrawGizmos()
     {
-        if (shapedGridPoints == null)
-        {
-            return;
-        }
 
         Gizmos.color = Color.blue;
-        Gizmos.DrawSphere(lerpedPosition, 0.1f);
+        Gizmos.DrawSphere(lastRayHit, 0.1f);
 
-        foreach (Vector3 point in shapedGridPoints)
+        Gizmos.color = Color.red;
+        if (shapedGridPoints != null)
         {
-            Gizmos.DrawSphere(point, 0.1f);
+            foreach (Vector3 point in shapedGridPoints)
+            {
+                Gizmos.DrawSphere(point, 0.1f);
+            }
         }
+
+        Gizmos.color = Color.green;
+        Gizmos.DrawSphere(rayHitPoint, 0.1f);
+        Gizmos.DrawRay(transform.position, (lastRayHit - transform.position).normalized * 10f);
+
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawSphere(transformPoint, 0.1f);
     }
 
     private void Update()
@@ -46,35 +56,22 @@ public class SimplePickupInteraction : MonoBehaviour
             Ray anchorRay = new Ray(anchor.position, anchor.forward);
             Physics.Raycast(anchorRay, out RaycastHit anchorRayHit, Mathf.Infinity, excludePickupLayerMask);
 
-            if (Vector3.Distance(anchorRayHit.point, lastRayHit) < distanceTreshold * anchorRayHit.distance)
-            {
-                // Small movements
-            }
-            else
+            if (Vector3.Distance(anchorRayHit.point, lastRayHit) > distanceTreshold * anchorRayHit.distance)
             {
                 // Large movements
                 lastRayHit = anchorRayHit.point;
             }
 
             lerpedPosition = Vector3.Lerp(lerpedPosition, lastRayHit, lerpSpeed * Time.deltaTime);
+
             Vector3 direction = (lerpedPosition - transform.position).normalized;
             Bounds bounds = currentObject.GetComponent<Renderer>().bounds;
             float longestBoundDist = Vector3.Distance(bounds.min, bounds.max);
 
-            currentObject.transform.position = transform.position + (direction * closestDistance) - (direction * bounds.size.x);
+            currentObject.transform.position = transform.position + (direction * closestDistance) - (direction * longestBoundDist / 2);
+            transformPoint = currentObject.transform.position;
             float scale = Vector3.Distance(transform.position, currentObject.transform.position) / initialDistance;
             currentObject.transform.localScale = initialScale * scale;
-
-            /*
-            Ray ray = new Ray(transform.position, lerpedPosition - transform.position);
-            if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, excludePickupLayerMask))
-            {
-                Bounds bounds = currentObject.GetComponent<Renderer>().bounds;
-                currentObject.transform.position = hit.point - ray.direction * bounds.size.x;
-                float scale = Vector3.Distance(transform.position, currentObject.transform.position) / initialDistance;
-                currentObject.transform.localScale = initialScale * scale;
-            }
-            */
         }
     }
 
@@ -83,6 +80,8 @@ public class SimplePickupInteraction : MonoBehaviour
         if (pickupObject == null)
         {
             // Object Dropped
+            GetDroppedPos();
+
             currentObject.GetComponent<Rigidbody>().isKinematic = false;
             currentObject.GetComponent<Collider>().isTrigger = false;
             currentObject = null;
@@ -149,17 +148,32 @@ public class SimplePickupInteraction : MonoBehaviour
         float closestDistance = Mathf.Infinity;
         foreach (Vector3 point in shapedGridPoints)
         {
-            Vector3 direction = point - transform.position;
+            Vector3 direction = (point - transform.position).normalized;
             RaycastHit hit;
             if (Physics.Raycast(transform.position, direction, out hit, Mathf.Infinity, excludePickupLayerMask))
             {
                 if (closestDistance > hit.distance)
                 {
                     closestDistance = hit.distance;
+                    rayHitPoint = hit.point;
+                    closestPoint = point;
                 }
             }
         }
 
         return closestDistance;
+    }
+
+    private void GetDroppedPos()
+    {
+        Vector3 direction = (closestPoint - rayHitPoint).normalized;
+        RaycastHit hit;
+        if (Physics.Raycast(rayHitPoint, direction, out hit, Mathf.Infinity, holdingLayerMask))
+        {
+            Vector3 controllerDirection = (lastRayHit - transform.position).normalized;
+            currentObject.transform.position = currentObject.transform.position + (controllerDirection * hit.distance * 0.75f);
+            float scale = Vector3.Distance(transform.position, currentObject.transform.position) / initialDistance;
+            currentObject.transform.localScale = initialScale * scale;
+        }
     }
 }
