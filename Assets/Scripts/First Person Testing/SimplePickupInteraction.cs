@@ -121,7 +121,13 @@ public class SimplePickupInteraction : MonoBehaviour
             initialScale = pickupObject.transform.localScale;
             currentObject.GetComponent<Rigidbody>().isKinematic = true;
             currentObject.GetComponent<Collider>().isTrigger = true;
-            objectAngle = currentObject.transform.rotation;
+
+            // Round currentObject angle to nearest axis
+            Vector3 roundedAngle = currentObject.transform.eulerAngles;
+            roundedAngle.x = Mathf.Round(roundedAngle.x / 90f) * 90f;
+            roundedAngle.y = Mathf.Round(roundedAngle.y / 90f) * 90f;
+            roundedAngle.z = Mathf.Round(roundedAngle.z / 90f) * 90f;
+            objectAngle = Quaternion.Euler(roundedAngle);
 
             leftMoveAction.action.Enable();
             rightTurnAction.action.Disable();
@@ -231,12 +237,12 @@ public class SimplePickupInteraction : MonoBehaviour
     {
         Vector2 thumbstickValue = context.ReadValue<Vector2>();
 
-        if (Mathf.Abs(thumbstickValue.x) > 0.2f)
+        if (Mathf.Abs(thumbstickValue.x) > 0.3f)
         {
             objectAngle = Quaternion.AngleAxis(thumbstickValue.x / Mathf.Abs(thumbstickValue.x) * 90f, Vector3.down) * currentObject.transform.rotation;
         }
 
-        if (Mathf.Abs(thumbstickValue.y) > 0.2f)
+        if (Mathf.Abs(thumbstickValue.y) > 0.3f)
         {
 
             objectAngle = Quaternion.AngleAxis(thumbstickValue.y / Mathf.Abs(thumbstickValue.y) * 90f, Vector3.right) * currentObject.transform.rotation;
