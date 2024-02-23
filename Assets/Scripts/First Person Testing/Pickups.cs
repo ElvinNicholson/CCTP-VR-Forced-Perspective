@@ -7,11 +7,10 @@ public class Pickups : MonoBehaviour
 {
     [SerializeField] private SimplePickupInteraction playerScript;
     private XRSimpleInteractable xrScript;
-    private bool pickedUp;
-    private bool lastPickedUpState;
 
-    private int adjustmentFrames = 1;
-    private int framesLeft;
+    [SerializeField] private InteractionLayerMask pickupMask;
+    private int coroutineFrameDuration = 3;
+    private bool coroutineRunning;
 
     private float initialDistance;
     private Vector3 initialScale;
@@ -25,39 +24,21 @@ public class Pickups : MonoBehaviour
         xrScript.selectExited.AddListener(OnSelectExit);
     }
 
-    private void Update()
-    {
-        if (lastPickedUpState != pickedUp)
-        {
-            lastPickedUpState = pickedUp;
-            // State change
-            if (pickedUp == false)
-            {
-                // Object just got dropped
-                framesLeft = adjustmentFrames;
-            }
-        }
-
-        if (framesLeft > 0)
-        {
-            framesLeft -= 1;
-            Rigidbody rigidbody = GetComponent<Rigidbody>();
-            rigidbody.velocity = Vector3.zero;
-            rigidbody.angularVelocity = Vector3.zero;
-        }
-    }
-
+    /// <summary>
+    /// Object picked up
+    /// </summary>
     private void OnSelectEnter(SelectEnterEventArgs args)
     {
-        pickedUp = true;
         playerScript.SetCurrentObject(gameObject, args.interactorObject.transform);
         args.interactorObject.transform.gameObject.GetComponent<XRInteractorLineVisual>().enabled = false;
         gameObject.layer = 7;
     }
 
+    /// <summary>
+    /// Object dropped
+    /// </summary>
     private void OnSelectExit(SelectExitEventArgs args)
     {
-        pickedUp = false;
         playerScript.SetCurrentObject(null, null);
         args.interactorObject.transform.gameObject.GetComponent<XRInteractorLineVisual>().enabled = true;
 
@@ -67,27 +48,72 @@ public class Pickups : MonoBehaviour
 
         dirToPlayer = (playerScript.transform.position - transform.position).normalized;
         initialScale = transform.localScale;
-        initialDistance = (transform.position - playerScript.transform.position).magnitude;
+        initialDistance = Vector3.Distance(playerScript.transform.position, transform.position);
         initialRotation = transform.rotation;
+
+        StartCoroutine(OnDropped());
     }
 
-    private void OnCollisionEnter(Collision collision)
+    /// <summary>
+    /// Failsafe incase object clips into another
+    /// </summary>
+    IEnumerator OnDropped()
     {
-        if (framesLeft > 0)
+        float framesLeft = coroutineFrameDuration;
+        coroutineRunning = true;
+
+        Rigidbody rigidbody = GetComponent<Rigidbody>();
+        rigidbody.useGravity = false;
+
+        while (framesLeft > 0)
         {
-            Debug.Log("Colliding");
+            framesLeft -= 1;
+            yield return null;
+        }
 
-            Rigidbody rigidbody = GetComponent<Rigidbody>();
-            rigidbody.velocity = Vector3.zero;
-            rigidbody.angularVelocity = Vector3.zero;
+        GetComponent<Collider>().isTrigger = false;
+        GetComponent<Rigidbody>().isKinematic = false;
+        rigidbody.useGravity = true;
 
-            Bounds bounds = GetComponent<Renderer>().bounds;
-            float moveDist = Vector3.Distance(bounds.min, bounds.max) * 0.5f;
+        coroutineRunning = false;
+    }
 
-            transform.position = transform.position + (dirToPlayer * moveDist);
-            float scale = Vector3.Distance(transform.position, playerScript.transform.position) / initialDistance;
-            transform.localScale = initialScale * scale;
-            transform.rotation = initialRotation;
+    /// <summary>
+    /// Moves object towards player to avoid clipping
+    /// </summary>
+    private void FixObjectClipping()
+    {
+        // Move object towards player
+        Bounds bounds = GetComponent<Renderer>().bounds;
+        float moveDist = Vector3.Distance(bounds.min, bounds.max) * 0.5f;
+
+        transform.position += dirToPlayer * moveDist;
+        float scale = Vector3.Distance(transform.position, playerScript.transform.position) / initialDistance;
+        transform.localScale = initialScale * scale;
+        transform.rotation = initialRotation;
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.gameObject.CompareTag("Player"))
+        {
+            // Player is colliding with object, dont allow interaction
+            xrScript.interactionLayers = 0;
+        }
+
+        if (coroutineRunning)
+        {
+            // Collision occurs after dropping object (Most likely object clipped through another)
+            FixObjectClipping();
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.gameObject.CompareTag("Player"))
+        {
+            // Player no longer colliding with object, allow interaction
+            xrScript.interactionLayers = pickupMask;
         }
     }
 }

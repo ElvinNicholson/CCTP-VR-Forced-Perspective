@@ -105,8 +105,6 @@ public class SimplePickupInteraction : MonoBehaviour
             rightTurnAction.action.Enable();
             rightThumbstickAction.action.Disable();
 
-            currentObject.GetComponent<Rigidbody>().isKinematic = false;
-            currentObject.GetComponent<Collider>().isTrigger = false;
             currentObject = null;
             anchor = null;
             lastRayHit = Vector3.zero;
@@ -116,9 +114,13 @@ public class SimplePickupInteraction : MonoBehaviour
             // Object Picked Up
             currentObject = pickupObject;
             anchor = controllerTransform;
+
+            // Set initial values
             lerpedPosition = currentObject.transform.position;
             initialDistance = (transform.position - currentObject.transform.position).magnitude;
             initialScale = pickupObject.transform.localScale;
+
+            // Disable object physics
             currentObject.GetComponent<Rigidbody>().isKinematic = true;
             currentObject.GetComponent<Collider>().isTrigger = true;
 
@@ -242,10 +244,23 @@ public class SimplePickupInteraction : MonoBehaviour
             objectAngle = Quaternion.AngleAxis(thumbstickValue.x / Mathf.Abs(thumbstickValue.x) * 90f, Vector3.down) * currentObject.transform.rotation;
         }
 
-        if (Mathf.Abs(thumbstickValue.y) > 0.3f)
+        else if (Mathf.Abs(thumbstickValue.y) > 0.3f)
         {
+            // Get rotational axis
+            Vector3 axis = (transform.position - currentObject.transform.position).normalized;
+            axis.y = 0;
+            if (Mathf.Abs(axis.x) >= Mathf.Abs(axis.z))
+            {
+                axis.x = 0;
+                axis.z = axis.z / Mathf.Abs(axis.z);
+            }
+            else
+            {
+                axis.x = axis.x / Mathf.Abs(axis.x);
+                axis.z = 0;
+            }
 
-            objectAngle = Quaternion.AngleAxis(thumbstickValue.y / Mathf.Abs(thumbstickValue.y) * 90f, Vector3.right) * currentObject.transform.rotation;
+            objectAngle = Quaternion.AngleAxis(thumbstickValue.y / Mathf.Abs(thumbstickValue.y) * 90f, axis) * currentObject.transform.rotation;
         }
     }
 }
