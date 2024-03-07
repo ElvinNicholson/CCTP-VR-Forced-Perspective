@@ -8,6 +8,7 @@ public class SimplePickupInteraction : MonoBehaviour
 {
     [SerializeField] private LayerMask excludeHoldingLayer;
     [SerializeField] private LayerMask holdingLayerMask;
+    [SerializeField] private LayerMask holdingPickupLayerMask;
     [SerializeField] private float distanceTreshold;
     [SerializeField] private float lerpSpeed;
     [SerializeField] private float rotateSpeed;
@@ -27,9 +28,12 @@ public class SimplePickupInteraction : MonoBehaviour
 
     private Quaternion objectAngle;
 
+    [Header("XR Interactors")]
     [SerializeField] private InputActionReference leftMoveAction;
     [SerializeField] private InputActionReference rightTurnAction;
     [SerializeField] private InputActionReference rightThumbstickAction;
+    [SerializeField] private XRRayInteractor leftRay;
+    [SerializeField] private XRRayInteractor rightRay;
 
     private void OnDrawGizmos()
     {
@@ -98,6 +102,9 @@ public class SimplePickupInteraction : MonoBehaviour
     {
         if (pickupObject == null)
         {
+            // Enable interactors
+            ToggleInteractor(true);
+
             // Object Dropped
             ImproveDropPos();
 
@@ -111,6 +118,9 @@ public class SimplePickupInteraction : MonoBehaviour
         }
         else
         {
+            // Disable interactors
+            ToggleInteractor(false);
+
             // Object Picked Up
             currentObject = pickupObject;
             anchor = controllerTransform;
@@ -262,5 +272,20 @@ public class SimplePickupInteraction : MonoBehaviour
 
             objectAngle = Quaternion.AngleAxis(thumbstickValue.y / Mathf.Abs(thumbstickValue.y) * 90f, axis) * currentObject.transform.rotation;
         }
+    }
+
+    private void ToggleInteractor(bool toggle)
+    {
+        if (toggle)
+        {
+            leftRay.raycastMask = holdingPickupLayerMask;
+            rightRay.raycastMask = holdingPickupLayerMask;
+        }
+        else
+        {
+            leftRay.raycastMask = holdingLayerMask;
+            rightRay.raycastMask = holdingLayerMask;
+        }
+
     }
 }

@@ -7,6 +7,7 @@ public class Pickups : MonoBehaviour
 {
     [SerializeField] private SimplePickupInteraction playerScript;
     private XRSimpleInteractable xrScript;
+    private bool pickedUp = false;
 
     [SerializeField] private InteractionLayerMask pickupMask;
     private int coroutineFrameDuration = 3;
@@ -17,11 +18,15 @@ public class Pickups : MonoBehaviour
     private Vector3 dirToPlayer;
     private Quaternion initialRotation;
 
+    private string matThicknessID = "_Outline_Thickness";
+
     private void Start()
     {
         xrScript = GetComponent<XRSimpleInteractable>();
         xrScript.selectEntered.AddListener(OnSelectEnter);
         xrScript.selectExited.AddListener(OnSelectExit);
+        xrScript.hoverEntered.AddListener(OnHoverEnter);
+        xrScript.hoverExited.AddListener(OnHoverExit);
     }
 
     /// <summary>
@@ -29,6 +34,8 @@ public class Pickups : MonoBehaviour
     /// </summary>
     private void OnSelectEnter(SelectEnterEventArgs args)
     {
+        pickedUp = true;
+
         playerScript.SetCurrentObject(gameObject, args.interactorObject.transform);
         args.interactorObject.transform.gameObject.GetComponent<XRInteractorLineVisual>().enabled = false;
         gameObject.layer = 7;
@@ -39,6 +46,8 @@ public class Pickups : MonoBehaviour
     /// </summary>
     private void OnSelectExit(SelectExitEventArgs args)
     {
+        pickedUp = false;
+
         playerScript.SetCurrentObject(null, null);
         args.interactorObject.transform.gameObject.GetComponent<XRInteractorLineVisual>().enabled = true;
 
@@ -52,6 +61,19 @@ public class Pickups : MonoBehaviour
         initialRotation = transform.rotation;
 
         StartCoroutine(OnDropped());
+    }
+
+    private void OnHoverEnter(HoverEnterEventArgs args)
+    {
+        GetComponent<MeshRenderer>().material.SetFloat(matThicknessID, 0.025f);
+    }
+
+    private void OnHoverExit(HoverExitEventArgs args)
+    {
+        if (!pickedUp)
+        {
+            GetComponent<MeshRenderer>().material.SetFloat(matThicknessID, 0f);
+        }
     }
 
     /// <summary>
