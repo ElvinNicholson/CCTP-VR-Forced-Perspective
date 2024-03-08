@@ -10,7 +10,8 @@ public class Pickups : MonoBehaviour
     private bool pickedUp = false;
 
     [SerializeField] private InteractionLayerMask pickupMask;
-    private int coroutineFrameDuration = 3;
+    [SerializeField] private LayerMask triggerMask;
+    private int coroutineFrameDuration = 2;
     private bool coroutineRunning;
 
     private float initialDistance;
@@ -18,15 +19,43 @@ public class Pickups : MonoBehaviour
     private Vector3 dirToPlayer;
     private Quaternion initialRotation;
 
+    private Rigidbody objectRigidbody;
+    private Collider objectCollider;
+    private Renderer objectRenderer;
+
     private string matThicknessID = "_Outline_Thickness";
+    private string matColorID = "_Outline_Color";
+
+    private int controllerHovering = 0;
 
     private void Start()
     {
         xrScript = GetComponent<XRSimpleInteractable>();
+        objectRigidbody = GetComponent<Rigidbody>();
+        objectCollider = GetComponent<Collider>();
+        objectRenderer = GetComponent<Renderer>();
+
         xrScript.selectEntered.AddListener(OnSelectEnter);
         xrScript.selectExited.AddListener(OnSelectExit);
         xrScript.hoverEntered.AddListener(OnHoverEnter);
         xrScript.hoverExited.AddListener(OnHoverExit);
+    }
+
+    private void Update()
+    {
+        if (!pickedUp)
+        {
+            if (IsTooCloseToPlayer())
+            {
+                // Too close to pickup
+                objectRenderer.material.SetColor(matColorID, Color.red);
+            }
+            else
+            {
+                // Can pickup
+                objectRenderer.material.SetColor(matColorID, Color.white);
+            }
+        }
     }
 
     /// <summary>
@@ -34,10 +63,17 @@ public class Pickups : MonoBehaviour
     /// </summary>
     private void OnSelectEnter(SelectEnterEventArgs args)
     {
+        if (IsTooCloseToPlayer())
+        {
+            return;
+        }
+
         pickedUp = true;
 
         playerScript.SetCurrentObject(gameObject, args.interactorObject.transform);
         args.interactorObject.transform.gameObject.GetComponent<XRInteractorLineVisual>().enabled = false;
+
+        // Set Layer to Holding
         gameObject.layer = 7;
     }
 
@@ -46,15 +82,24 @@ public class Pickups : MonoBehaviour
     /// </summary>
     private void OnSelectExit(SelectExitEventArgs args)
     {
+        if (IsTooCloseToPlayer())
+        {
+            return;
+        }
+
         pickedUp = false;
 
         playerScript.SetCurrentObject(null, null);
         args.interactorObject.transform.gameObject.GetComponent<XRInteractorLineVisual>().enabled = true;
 
+        // Set Layer to PickUp
         gameObject.layer = 6;
-        GetComponent<Rigidbody>().useGravity = true;
-        GetComponent<Rigidbody>().constraints = RigidbodyConstraints.None;
 
+        // Enable gravity
+        objectRigidbody.useGravity = true;
+        objectRigidbody.constraints = RigidbodyConstraints.None;
+
+        // Initial on dropped info
         dirToPlayer = (playerScript.transform.position - transform.position).normalized;
         initialScale = transform.localScale;
         initialDistance = Vector3.Distance(playerScript.transform.position, transform.position);
@@ -65,14 +110,18 @@ public class Pickups : MonoBehaviour
 
     private void OnHoverEnter(HoverEnterEventArgs args)
     {
-        GetComponent<MeshRenderer>().material.SetFloat(matThicknessID, 0.025f);
+        // Enable outline
+        controllerHovering++;
+        objectRenderer.material.SetFloat(matThicknessID, 0.025f);
     }
 
     private void OnHoverExit(HoverExitEventArgs args)
     {
-        if (!pickedUp)
+        controllerHovering--;
+        if (!pickedUp && controllerHovering <= 0)
         {
-            GetComponent<MeshRenderer>().material.SetFloat(matThicknessID, 0f);
+            // Disable outline
+            objectRenderer.material.SetFloat(matThicknessID, 0f);
         }
     }
 
@@ -84,8 +133,8 @@ public class Pickups : MonoBehaviour
         float framesLeft = coroutineFrameDuration;
         coroutineRunning = true;
 
-        Rigidbody rigidbody = GetComponent<Rigidbody>();
-        rigidbody.useGravity = false;
+        objectRigidbody.useGravity = false;
+        objectRigidbody.excludeLayers = triggerMask;
 
         while (framesLeft > 0)
         {
@@ -93,9 +142,11 @@ public class Pickups : MonoBehaviour
             yield return null;
         }
 
-        GetComponent<Collider>().isTrigger = false;
-        GetComponent<Rigidbody>().isKinematic = false;
-        rigidbody.useGravity = true;
+        objectCollider.isTrigger = false;
+        objectRigidbody.isKinematic = false;
+        objectRigidbody.useGravity = true;
+        objectRigidbody.excludeLayers = new LayerMask();
+        xrScript.interactionLayers = pickupMask;
 
         coroutineRunning = false;
     }
@@ -106,13 +157,27 @@ public class Pickups : MonoBehaviour
     private void FixObjectClipping()
     {
         // Move object towards player
-        Bounds bounds = GetComponent<Renderer>().bounds;
+        Bounds bounds = objectRenderer.bounds;
         float moveDist = Vector3.Distance(bounds.min, bounds.max) * 0.5f;
 
         transform.position += dirToPlayer * moveDist;
         float scale = Vector3.Distance(transform.position, playerScript.transform.position) / initialDistance;
         transform.localScale = initialScale * scale;
         transform.rotation = initialRotation;
+    }
+
+    /// <summary>
+    /// Force drops currentObject if its size is bigger than distance from player to avoid clipping
+    /// </summary>
+    private bool IsTooCloseToPlayer()
+    {
+        float objectMaxSize = Vector3.Distance(objectRenderer.bounds.min, objectRenderer.bounds.max);
+        float distToObject = Vector3.Distance(playerScript.transform.position, transform.position);
+        if (objectMaxSize > distToObject)
+        {
+            return true;
+        }
+        return false;
     }
 
     private void OnTriggerEnter(Collider other)

@@ -106,7 +106,7 @@ public class SimplePickupInteraction : MonoBehaviour
             ToggleInteractor(true);
 
             // Object Dropped
-            ImproveDropPos();
+            ImproveDropPos(5);
 
             // Enable movement, disable turning
             rightTurnAction.action.Enable();
@@ -224,11 +224,11 @@ public class SimplePickupInteraction : MonoBehaviour
     /// <summary>
     /// Called when object is dropped, improves dropped location accuracy
     /// </summary>
-    private void ImproveDropPos()
+    private void ImproveDropPos(int maxIteration)
     {
         Vector3 closestGridToRayHit = currentObject.GetComponent<Collider>().ClosestPoint(rayHitPoint);
         float distance = Vector3.Distance(closestGridToRayHit, rayHitPoint);
-        if (distance > 0.1f)
+        if (distance > 0.1f && maxIteration > 0)
         {
             Vector3 moveDirection = (lerpedPosition - transform.position).normalized;
             currentObject.transform.position = currentObject.transform.position + (moveDirection * distance * 0.5f);
@@ -238,7 +238,7 @@ public class SimplePickupInteraction : MonoBehaviour
             shapedGridPoints = GetShapedGridPoints(GetBoundingGridPoints(gridSize));
             RaycastGridPoints();
 
-            ImproveDropPos();
+            ImproveDropPos(maxIteration - 1);
         }
     }
 
