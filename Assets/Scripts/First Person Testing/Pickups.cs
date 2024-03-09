@@ -9,8 +9,8 @@ public class Pickups : MonoBehaviour
     private XRSimpleInteractable xrScript;
     private bool pickedUp = false;
 
-    [SerializeField] private InteractionLayerMask pickupMask;
-    [SerializeField] private LayerMask triggerMask;
+    private InteractionLayerMask pickupMask;
+    private LayerMask triggerMask;
     private int coroutineFrameDuration = 2;
     private bool coroutineRunning;
 
@@ -30,6 +30,9 @@ public class Pickups : MonoBehaviour
 
     private void Start()
     {
+        pickupMask = InteractionLayerMask.GetMask("Pickup Objects");
+        triggerMask = LayerMask.GetMask("Trigger");
+
         xrScript = GetComponent<XRSimpleInteractable>();
         objectRigidbody = GetComponent<Rigidbody>();
         objectCollider = GetComponent<Collider>();
@@ -182,25 +185,10 @@ public class Pickups : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject.CompareTag("Player"))
-        {
-            // Player is colliding with object, dont allow interaction
-            xrScript.interactionLayers = 0;
-        }
-
         if (coroutineRunning)
         {
             // Collision occurs after dropping object (Most likely object clipped through another)
             FixObjectClipping();
-        }
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (other.gameObject.CompareTag("Player"))
-        {
-            // Player no longer colliding with object, allow interaction
-            xrScript.interactionLayers = pickupMask;
         }
     }
 }

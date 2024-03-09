@@ -7,8 +7,8 @@ using UnityEngine.InputSystem;
 public class SimplePickupInteraction : MonoBehaviour
 {
     [SerializeField] private LayerMask excludeHoldingLayer;
-    [SerializeField] private LayerMask holdingLayerMask;
-    [SerializeField] private LayerMask holdingPickupLayerMask;
+    private LayerMask holdingLayerMask;
+    private LayerMask initialLayerMask;
     [SerializeField] private float distanceTreshold;
     [SerializeField] private float lerpSpeed;
     [SerializeField] private float rotateSpeed;
@@ -59,6 +59,9 @@ public class SimplePickupInteraction : MonoBehaviour
 
     private void Start()
     {
+        holdingLayerMask = LayerMask.GetMask("Holding");
+        initialLayerMask = leftRay.raycastMask;
+
         rightThumbstickAction.action.Disable();
         rightThumbstickAction.action.performed += OnThumbstick;
     }
@@ -274,12 +277,15 @@ public class SimplePickupInteraction : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Toggles wheter hand rays interactors can detect object in PickUp layer
+    /// </summary>
     private void ToggleInteractor(bool toggle)
     {
         if (toggle)
         {
-            leftRay.raycastMask = holdingPickupLayerMask;
-            rightRay.raycastMask = holdingPickupLayerMask;
+            leftRay.raycastMask = initialLayerMask;
+            rightRay.raycastMask = initialLayerMask;
         }
         else
         {
@@ -287,5 +293,21 @@ public class SimplePickupInteraction : MonoBehaviour
             rightRay.raycastMask = holdingLayerMask;
         }
 
+    }
+
+    public void DisableInteractionLayer(bool toggle)
+    {
+        if (toggle)
+        {
+            // Disable
+            leftRay.interactionLayers = new InteractionLayerMask();
+            rightRay.interactionLayers = new InteractionLayerMask();
+        }
+        else
+        {
+            // Enable
+            leftRay.interactionLayers = InteractionLayerMask.GetMask("Pickup Objects");
+            rightRay.interactionLayers = InteractionLayerMask.GetMask("Pickup Objects");
+        }
     }
 }
