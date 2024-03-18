@@ -106,7 +106,7 @@ public class SimplePickupInteraction : MonoBehaviour
         if (pickupObject == null)
         {
             // Enable interactors
-            ToggleInteractor(true);
+            ToggleInteractor(true, null);
 
             // Object Dropped
             ImproveDropPos(5);
@@ -122,7 +122,7 @@ public class SimplePickupInteraction : MonoBehaviour
         else
         {
             // Disable interactors
-            ToggleInteractor(false);
+            ToggleInteractor(false, controllerTransform.parent.name);
 
             // Object Picked Up
             currentObject = pickupObject;
@@ -280,7 +280,7 @@ public class SimplePickupInteraction : MonoBehaviour
     /// <summary>
     /// Toggles wheter hand rays interactors can detect object in PickUp layer
     /// </summary>
-    private void ToggleInteractor(bool toggle)
+    private void ToggleInteractor(bool toggle, string controllerName)
     {
         if (toggle)
         {
@@ -289,8 +289,16 @@ public class SimplePickupInteraction : MonoBehaviour
         }
         else
         {
-            leftRay.raycastMask = holdingLayerMask;
-            rightRay.raycastMask = holdingLayerMask;
+            if (controllerName.Contains("Left"))
+            {
+                leftRay.raycastMask = holdingLayerMask;
+                rightRay.raycastMask = 0;
+            }
+            else
+            {
+                leftRay.raycastMask = 0;
+                rightRay.raycastMask = holdingLayerMask;
+            }
         }
 
     }
