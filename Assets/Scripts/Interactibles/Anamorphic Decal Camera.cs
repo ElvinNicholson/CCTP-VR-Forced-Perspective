@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using SamDriver.Decal;
+using UnityEngine.Events;
 
 public class AnamorphicDecalCamera : MonoBehaviour
 {
@@ -9,30 +10,29 @@ public class AnamorphicDecalCamera : MonoBehaviour
     [SerializeField] private List<DecalMesh> decals;
     [SerializeField] private float closeEnoughDistance;
     [SerializeField] private float closeEnoughAngle;
-    [SerializeField] private Vector3 positionOffset;
+    [SerializeField] private UnityEvent OnActivated;
     private Camera decalCamera;
     private Transform mainCam;
     private bool initalized = false;
-
-    private void Start()
-    {
-        
-    }
+    private bool activated = false;
 
     private void Update()
     {
-        if (!initalized)
+        if (!initalized || activated)
         {
             return;
         }
 
         if (PositionIsCloseEnough() && AngleIsCloseEnough())
         {
+            activated = true;
             decalObject.layer = 6;
             foreach (DecalMesh decal in decals)
             {
                 decal.gameObject.SetActive(false);
             }
+
+            OnActivated?.Invoke();
         }
     }
 
@@ -47,7 +47,7 @@ public class AnamorphicDecalCamera : MonoBehaviour
 
         mainCam = Camera.main.transform;
         //float playerHeight = mainCam.parent.parent.GetComponent<CharacterController>().height;
-        float playerHeight = Mathf.Abs(mainCam.position.y - mainCam.parent.parent.position.y);
+        float playerHeight = Mathf.Abs(mainCam.position.y - mainCam.parent.parent.position.y) + 0.025f;
         transform.localPosition = new Vector3(transform.localPosition.x, playerHeight, transform.localPosition.z);
 
         SnapshotRenderTexture();
@@ -81,7 +81,7 @@ public class AnamorphicDecalCamera : MonoBehaviour
 
     private bool PositionIsCloseEnough()
     {
-        if (Vector3.Distance(transform.position + positionOffset, mainCam.position) <= closeEnoughDistance)
+        if (Vector3.Distance(transform.position, mainCam.position) <= closeEnoughDistance)
         {
             return true;
         }
@@ -90,7 +90,9 @@ public class AnamorphicDecalCamera : MonoBehaviour
 
     private bool AngleIsCloseEnough()
     {
-        if (Mathf.Abs(transform.rotation.eulerAngles.y - mainCam.root.eulerAngles.y) <= closeEnoughAngle)
+        float angle = Mathf.Abs(transform.rotation.eulerAngles.y - mainCam.root.eulerAngles.y);
+        angle = Mathf.Min(angle, 360 - angle);
+        if (angle <= closeEnoughAngle)
         {
             return true;
         }
