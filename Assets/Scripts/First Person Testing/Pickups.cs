@@ -5,7 +5,7 @@ using UnityEngine.XR.Interaction.Toolkit;
 
 public class Pickups : MonoBehaviour
 {
-    [SerializeField] private SimplePickupInteraction playerScript;
+    private SimplePickupInteraction playerScript;
     private XRSimpleInteractable xrScript;
     private bool pickedUp = false;
 
@@ -30,6 +30,8 @@ public class Pickups : MonoBehaviour
 
     private void Start()
     {
+        playerScript = Camera.main.GetComponent<SimplePickupInteraction>();
+
         pickupMask = InteractionLayerMask.GetMask("Pickup Objects");
         triggerMask = LayerMask.GetMask("Trigger");
 
@@ -75,6 +77,7 @@ public class Pickups : MonoBehaviour
 
         playerScript.SetCurrentObject(gameObject, args.interactorObject.transform);
         args.interactorObject.transform.gameObject.GetComponent<XRInteractorLineVisual>().enabled = false;
+        args.interactorObject.transform.gameObject.GetComponentInChildren<SimpleAimGuide>().OnPickUp();
 
         // Set Layer to Holding
         gameObject.layer = 7;
@@ -94,6 +97,7 @@ public class Pickups : MonoBehaviour
 
         playerScript.SetCurrentObject(null, null);
         args.interactorObject.transform.gameObject.GetComponent<XRInteractorLineVisual>().enabled = true;
+        args.interactorObject.transform.gameObject.GetComponentInChildren<SimpleAimGuide>().OnDrop();
 
         // Set Layer to PickUp
         gameObject.layer = 6;

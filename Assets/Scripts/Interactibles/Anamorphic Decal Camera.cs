@@ -36,6 +36,9 @@ public class AnamorphicDecalCamera : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Snapshots decal camera to render texture and display it on the decal
+    /// </summary>
     public void InitalizeDecals()
     {
         if (initalized)
@@ -45,14 +48,17 @@ public class AnamorphicDecalCamera : MonoBehaviour
 
         initalized = true;
 
+        // Adjust decal camera height to player height
         mainCam = Camera.main.transform;
-        //float playerHeight = mainCam.parent.parent.GetComponent<CharacterController>().height;
         float playerHeight = Mathf.Abs(mainCam.position.y - mainCam.parent.parent.position.y) + 0.025f;
         transform.localPosition = new Vector3(transform.localPosition.x, playerHeight, transform.localPosition.z);
 
         SnapshotRenderTexture();
     }
 
+    /// <summary>
+    /// Fits the decal object to decal camera view
+    /// </summary>
     public void ProjectDecals()
     {
         SnapshotRenderTexture();
@@ -63,6 +69,9 @@ public class AnamorphicDecalCamera : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Snapshots the decal camera render texture, render textures will overlap each other when called in the same frame!
+    /// </summary>
     private void SnapshotRenderTexture()
     {
         decalCamera = GetComponent<Camera>();
@@ -79,6 +88,10 @@ public class AnamorphicDecalCamera : MonoBehaviour
         decal.transform.localScale = new Vector3(planeWidthScale, planeHeightScale, 1);
     }
 
+    /// <summary>
+    /// Checks if player camera position is close enough to decal camera position
+    /// </summary>
+    /// <returns>True if close enough, false otherwise</returns>
     private bool PositionIsCloseEnough()
     {
         if (Vector3.Distance(transform.position, mainCam.position) <= closeEnoughDistance)
@@ -88,6 +101,10 @@ public class AnamorphicDecalCamera : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Checks if player camera rotation is close enough to decal camera rotation
+    /// </summary>
+    /// <returns>True if close enough, false otherwise</returns>
     private bool AngleIsCloseEnough()
     {
         float angle = Mathf.Abs(transform.rotation.eulerAngles.y - mainCam.root.eulerAngles.y);
