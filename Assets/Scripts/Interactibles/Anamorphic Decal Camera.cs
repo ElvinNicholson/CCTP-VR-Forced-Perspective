@@ -10,11 +10,15 @@ public class AnamorphicDecalCamera : MonoBehaviour
     [SerializeField] private List<DecalMesh> decals;
     [SerializeField] private float closeEnoughDistance;
     [SerializeField] private float closeEnoughAngle;
+    [SerializeField] private GameObject hint;
+    [SerializeField] private float timeToHint;
     [SerializeField] private UnityEvent OnActivated;
     private Camera decalCamera;
     private Transform mainCam;
     private bool initalized = false;
     private bool activated = false;
+    private float timer = 0;
+    private bool countdownActive = false;
 
     private void Update()
     {
@@ -31,8 +35,15 @@ public class AnamorphicDecalCamera : MonoBehaviour
             {
                 decal.gameObject.SetActive(false);
             }
+            hint.SetActive(false);
+            countdownActive = false;
 
             OnActivated?.Invoke();
+        }
+
+        if (countdownActive)
+        {
+            CountdownHint();
         }
     }
 
@@ -114,5 +125,25 @@ public class AnamorphicDecalCamera : MonoBehaviour
             return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// Displays hint after timeToHint elapsed
+    /// </summary>
+    private void CountdownHint()
+    {
+        if (timer < timeToHint)
+        {
+            timer += Time.deltaTime;
+        }
+        else
+        {
+            hint.SetActive(true);
+        }
+    }
+
+    public void StartCountdown()
+    {
+        countdownActive = true;
     }
 }
