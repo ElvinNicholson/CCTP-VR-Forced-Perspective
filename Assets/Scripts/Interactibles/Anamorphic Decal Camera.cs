@@ -91,6 +91,9 @@ public class AnamorphicDecalCamera : MonoBehaviour
         decalCamera.enabled = false;
     }
 
+    /// <summary>
+    /// Taken from: https://www.youtube.com/watch?v=8hCl4-Y6TFQ (DA LAB)
+    /// </summary>
     private void ScaleToCamera(DecalMesh decal)
     {
         float planeToCamDist = Vector3.Distance(decal.transform.position, transform.position);

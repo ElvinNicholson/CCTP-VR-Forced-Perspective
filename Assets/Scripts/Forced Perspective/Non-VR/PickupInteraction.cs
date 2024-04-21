@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-// TAKEN FROM https://itch.io/blog/547361/unity-superliminal-tutorial
+// TAKEN FROM https://itch.io/blog/547361/unity-superliminal-tutorial (Atrwae)
 public class PickupInteraction : MonoBehaviour
 {
     [SerializeField] private Camera mainCamera;
